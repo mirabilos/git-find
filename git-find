@@ -1,0 +1,281 @@
+#!/bin/mksh
+# -*- mode: sh -*-
+#-
+# Copyright © 2015, 2016
+#	mirabilos <t.glaser@tarent.de>
+#
+# Provided that these terms and disclaimer and all copyright notices
+# are retained or reproduced in an accompanying document, permission
+# is granted to deal in this work without restriction, including un‐
+# limited rights to use, publicly perform, distribute, sell, modify,
+# merge, give away, or sublicence.
+#
+# This work is provided “AS IS” and WITHOUT WARRANTY of any kind, to
+# the utmost extent permitted by applicable law, neither express nor
+# implied; without malicious intent or gross negligence. In no event
+# may a licensor, author or contributor be held liable for indirect,
+# direct, other damage, loss, or other issues arising in any way out
+# of dealing in the work, even if advised of the possibility of such
+# damage or existence of a defect, except proven that it results out
+# of said person’s immediate fault when using the work as intended.
+
+set -o pipefail
+
+cleanup() {
+	exit $1
+}
+
+die() {
+	print -ru2 -- "E: $*"
+	cleanup 2
+}
+
+usage() {
+	print -ru2 -- "Usage:"
+	print -ru2 -- " ${0##*/} [-E] [-[i]name | -[i]regex | -[i]wholename] [pattern] [-print0]"
+	print -ru2 -- " ${0##*/} [-E] \( ! -mode pattern -a|-o -mode pattern \) ... [-print0]"
+	cleanup ${1:-2}
+}
+
+lvl=0
+parse_or() {
+	(( ++lvl ))
+	cat >"$T/tmpi$lvl" || die "cannot update temporary file"
+	true >"$T/tmpo$lvl" || die "cannot update temporary file"
+	while :; do
+		parse_and <"$T/tmpi$lvl" >>"$T/tmpo$lvl" || \
+		    die "cannot update temporary file"
+		(( ${#args[*]} )) || break
+		[[ ${args[0]} = \) ]] && break
+		[[ ${args[0]} = -o ]] || usage
+		unset args[0]
+		(( ${#args[*]} )) || usage
+		set -A args -- "${args[@]}"
+	done
+	LC_ALL=C sort -zu <"$T/tmpo$lvl"
+	(( e = $? )) && die "sort died with errorlevel $e"
+	(( --lvl ))
+	:
+}
+
+parse_and() {
+	(( ++lvl ))
+	cat >"$T/tmpi$lvl" || die "cannot update temporary file"
+	while :; do
+		parse_not <"$T/tmpi$lvl" >"$T/tmpo$lvl" || \
+		    die "cannot update temporary file"
+		(( ${#args[*]} )) || break
+		[[ ${args[0]} = \) ]] && break
+		[[ ${args[0]} = -o ]] && break
+		[[ ${args[0]} = -a ]] || usage
+		unset args[0]
+		(( ${#args[*]} )) || usage
+		set -A args -- "${args[@]}"
+		mv "$T/tmpo$lvl" "$T/tmpi$lvl" || \
+		    die "cannot update temporary file"
+	done
+	cat "$T/tmpo$lvl" || die "cannot read temporary file"
+	(( --lvl ))
+	:
+}
+
+parse_not() {
+	local notf=0
+
+	set -- "${args[@]}"
+	while [[ $1 = '!' ]]; do
+		(( notf = !notf ))
+		shift
+	done
+	(( $# )) || usage
+	set -A args -- "$@"
+
+	if (( notf )); then
+		(( ++lvl ))
+		cat >"$T/tmpi$lvl" || die "cannot update temporary file"
+		LC_ALL=C tr '\n\0' '\0\n' <"$T/tmpi$lvl" >"$T/tmpn$lvl" || \
+		    die "cannot update temporary file"
+		parse_parens <"$T/tmpi$lvl" >"$T/tmpo$lvl" || \
+		    die "cannot update temporary file"
+		<"$T/tmpo$lvl" \
+		    LC_ALL=C tr '\n\0' '\0\n' | \
+		    LC_ALL=C comm -23 "$T/tmpn$lvl" - | \
+		    LC_ALL=C tr '\n\0' '\0\n' || \
+		    die "cannot update temporary file"
+		(( --lvl ))
+	else
+		parse_parens
+	fi
+	:
+}
+
+parse_parens() {
+	if [[ ${args[0]} = \( ]]; then
+		unset args[0]
+		(( ${#args[*]} )) || usage
+		set -A args -- "${args[@]}"
+		parse_or
+		[[ ${args[0]} = \) ]] || usage
+		unset args[0]
+		set -A args -- "${args[@]}"
+	else
+		parse_cmd
+	fi
+	:
+}
+
+parse_cmd() {
+	set -- "${args[@]}"
+	(( $# < 2 )) && usage
+	[[ $1 = '-'?(i)@(name|regex|wholename) ]] || usage
+	eval "do_${1#-}" '"$2"'
+	shift 2
+	set -A args -- "$@"
+	:
+}
+
+do_regex() {
+	grep $egrep -zxe "$1"
+	(( (e = $?) > 1 )) && die "grep died with errorlevel $e"
+	:
+}
+do_iregex() {
+	grep $egrep -zxie "$1"
+	(( (e = $?) > 1 )) && die "grep died with errorlevel $e"
+	:
+}
+
+do_wholename() {
+	# ugh, was originally thinking of converting
+	# the pattern to regex and calling grep -z
+	# turns out conversion is nontrivial
+	local name
+	while IFS= read -d '' -r name; do
+		[[ $name = $1 ]] || continue
+		print -nr -- "$name"
+		print -n '\0'
+	done
+	:
+}
+do_iwholename() {
+	local name
+	local -l lcname pattern=$1
+	while IFS= read -d '' -r name; do
+		lcname=$name
+		[[ $lcname = $pattern ]] || continue
+		print -nr -- "$name"
+		print -n '\0'
+	done
+	:
+}
+
+do_name() {
+	local name pname
+	while IFS= read -d '' -r name; do
+		pname=${name##*/}
+		[[ $pname = $1 ]] || continue
+		print -nr -- "$name"
+		print -n '\0'
+	done
+	:
+}
+do_iname() {
+	local name
+	local -l lcname pattern=$1
+	while IFS= read -d '' -r name; do
+		lcname=${name##*/}
+		[[ $lcname = $pattern ]] || continue
+		print -nr -- "$name"
+		print -n '\0'
+	done
+	:
+}
+
+T=$(mktemp -d "${TMPDIR:-/tmp}/git-find.XXXXXXXXXX") || \
+    die Cannot create temporary directory
+cleanup() {
+	cd /
+	rm -rf "$T"
+	exit $1
+}
+
+git ls-tree -r --name-only -z HEAD | LC_ALL=C sort -z >"$T/lst"
+set -A args -- "${PIPESTATUS[@]}"
+[[ ${args[0]} = 0 ]] || die "git ls-tree died with errorlevel ${args[0]}"
+[[ ${args[1]} = 0 ]] || die "sort died with errorlevel ${args[1]}"
+
+set -A args -- "$@"
+if [[ ${args[${#args[*]}-1]} = -print0 ]]; then
+	unset args[${#args[*]}-1]
+	set -- "${args[@]}"
+	output() {
+		cat "$1"
+	}
+else
+	output() {
+		LC_ALL=C tr '\0' '\n' <"$1"
+	}
+fi
+
+egrep=
+c=
+while (( $# )); do
+	case $1 {
+	(-E)
+		egrep=-E
+		;;
+	(\!|\(|-iname|-iregex|-iwholename|-name|-regex|-wholename) #)
+		c=mode
+		;;
+	(--)
+		shift
+		c=patdash
+		;;
+	(-*)
+		usage
+		;;
+	(*)
+		c=pattern
+		;;
+	}
+	[[ -n $c ]] && break
+	shift
+done
+
+case $#:$c {
+(0:|0:patdash)
+	mv "$T/lst" "$T/dst" || die "cannot update temporary file"
+	;;
+(*:patdash)
+	pfx=
+	LC_ALL=C grep -qz '^-' "$T/lst"
+	pfx=$?
+	case $pfx {
+	(0) pfx=./ ;;
+	(1) pfx= ;;
+	(*) die "grep died with errorlevel $pfx" ;;
+	}
+	set -A args
+	nargs=0
+	while IFS= read -d '' -r name; do
+		args[nargs++]=$pfx$name
+	done <"$T/lst"
+	find -- "${args[@]}" "$@"
+	cleanup $?
+	;;
+(1:pattern)
+	do_name "$1" <"$T/lst" >"$T/dst" || die "cannot update temporary file"
+	;;
+(*:mode)
+	set -A args -- "$@"
+	parse_or <"$T/lst" >"$T/dst" || die "cannot update temporary file"
+	(( ${#args[*]} )) && usage
+	;;
+(*)
+	usage
+	;;
+}
+
+[[ -s $T/dst ]] || cleanup 1
+output "$T/dst" || die "cannot read temporary file"
+cleanup 0

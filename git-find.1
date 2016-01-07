@@ -1,0 +1,229 @@
+.\" Copyright © 2016
+.\"	mirabilos <t.glaser@tarent.de>
+.\"
+.\" Provided that these terms and disclaimer and all copyright notices
+.\" are retained or reproduced in an accompanying document, permission
+.\" is granted to deal in this work without restriction, including un‐
+.\" limited rights to use, publicly perform, distribute, sell, modify,
+.\" merge, give away, or sublicence.
+.\"
+.\" This work is provided “AS IS” and WITHOUT WARRANTY of any kind, to
+.\" the utmost extent permitted by applicable law, neither express nor
+.\" implied; without malicious intent or gross negligence. In no event
+.\" may a licensor, author or contributor be held liable for indirect,
+.\" direct, other damage, loss, or other issues arising in any way out
+.\" of dealing in the work, even if advised of the possibility of such
+.\" damage or existence of a defect, except proven that it results out
+.\" of said person’s immediate fault when using the work as intended.
+.Dd January 6, 2016
+.Dt GIT\-FIND 1
+.Os
+.Sh NAME
+.Nm git\-find
+.Nd find files in a git working copy
+.Sh SYNOPSIS
+.Nm git find
+.Op Fl E
+.Op Ar condition | Ar pattern
+.Op Fl print0
+.Nm git find
+.Fl \-
+.Ar find_options
+.Sh DESCRIPTION
+The
+.Nm git find
+command searches for pathnames of files currently known to git,
+that is, part of the HEAD, that match certain
+.Ar condition Ns s .
+It is modelled somewhat after the regular Unix
+.Xr find 1
+command, although with some limitations, and it only implements
+some matches based on pathnames, although reusing the system
+.Nm find
+is available (see below) if the amount of files known to
+.Nm git
+is below the operating system-imposed limitation for this to work.
+.Pp
+The output is guaranteed to be sorted according to the "C" locale,
+with NUL line separators used internally.
+All matches are relative to the current working directory.
+.Pp
+If
+.Nm git find Fl \-
+is called with at least one more argument, the list of files and
+all further arguments are passed on to the system
+.Nm find
+utility instead, and its output is returned unchanged (and unsorted).
+This may fail with "Argument list too long" and exit status 1 if the
+amount of files in git HEAD is too large; on the other hand, the full
+feature set of
+.Xr find 1
+is available in this mode.
+All files will be prepended with
+.Dq ./
+if a pathname starts with a dash
+.Pq Sq \-\& .
+.Pp
+If
+.Nm git find
+is called without a
+.Ar condition ,
+it returns the list of files in the index matching
+.Ar pattern ,
+if given, with the
+.Fl name
+method; otherwise, the entire list is returned.
+.Pp
+The options are as follows:
+.Bl -tag -width XX
+.It Fl E
+Use
+.Tn POSIX
+extended regular expressions (actually, whatever
+.Ic grep Fl E
+uses) for the
+.Fl regex
+and
+.Fl iregex
+operations instead of the default
+.Tn POSIX
+basic regular expressions (actually, whatever
+.Ic grep
+without
+.Fl E
+uses).
+.It Fl print0
+Use ASCII NUL to terminate output lines
+instead of the default ASCII linefeed
+.Pq Sq \en .
+.El
+.Pp
+Valid ways to combine
+.Ar condition Ns s
+are, in decreasing order of precedence:
+.Bl -tag -width XX
+.It Ic (\& condition )\&
+Returns entries for which the sub-condition is true.
+.It Ic !\& condition
+Returns entries for which the sub-condition is false.
+.It Ic condition Fl a Ic condition
+Returns entries matching both the first and the second conditions.
+.It Ic condition Fl o Ic condition
+Returns entries matching either the first or the second condition.
+.El
+.Pp
+Regular
+.Ar condition Ns s
+are:
+.Bl -tag -width XX
+.It Fl iname Ar pattern
+Returns files whose basename, i.e. the part after the last slash
+.Pq Sq / ,
+matches the shell
+.Ar pattern
+case-insensitively.
+.It Fl iregex Ar expression
+Returns files whose full relative path matches the regular
+.Ar expression
+case-insensitively.
+.It Fl iwholename Ar pattern
+Returns files whose full relative path matches the shell
+.Ar pattern
+case-insensitively.
+.It Fl name Ar pattern
+Returns files whose basename matches the shell
+.Ar pattern .
+.It Fl regex Ar expression
+Returns files whose full relative path matches the regular
+.Ar expression .
+.It Fl wholename Ar pattern
+Returns files whose full relative path matches the shell
+.Ar pattern .
+.El
+.Pp
+For a documentation of the available options and expressions in system
+.Xr find 1
+mode please refer to its documentation.
+.Sh EXAMPLES
+Display all files known to
+.Nm git :
+.Pp
+.Dl git find
+.Pp
+The same, using the system
+.Nm find :
+.Pp
+.Dl git find \-\- \-print
+.Pp
+Several ways of finding all SVG files:
+.Bd -literal -offset indent
+git find \e*.svg
+git find \-name '*.svg'
+git find \-regex '.*\.svg'
+git find \-\- \-path '*.svg'
+.Ed
+.Pp
+Combinations:
+.Pp
+.Bd -literal -offset indent
+git find \e( -name foo -o -name bar \e) -a \e! -fullname '*docs*'
+.Ed
+.Pp
+Find recently changed files:
+.Pp
+.Dl git find \-\- \-mtime \-1 \-ls
+.Sh DIAGNOSTICS
+Exit status is generally 0 on success and nonzero on failure,
+although, other than "Argument list too long" in the system
+.Nm find
+case, errors are generally returned as exit status 2, and
+empty matches as exit status 1.
+.Sh SEE ALSO
+.Xr find 1 ,
+.Xr git 1 ,
+.Xr git\-ls\-tree 1 ,
+.Xr grep 1 ,
+.Xr glob 7 ,
+.Xr re_format 7
+.Sh AUTHORS
+.Nm git find
+was developed by
+.An mirabilos Aq t.glaser@tarent.de
+to eventually be included as part of the
+.Nm git
+suite.
+.Sh CAVEATS
+.Nm git find
+was only tested on an up-to-date Debian system and uses several
+extensions, such as requesting NUL as line separators for tools
+called internally, and is written in recent mksh.
+.Pp
+Unlike
+.Xr find 1 ,
+.Ic emacs ,
+.Ic posix\-awk ,
+and
+.Ic posix\-extended
+regular expression syntax flavours are not implemented, only
+.Ic posix\-basic
+(the default) and
+.Ic posix\-egrep .
+.Pp
+Matching by name or wholename, instead of regex, is implemented
+in shell and therefore somewhat slower; it currently implements
+Korn Shell style extended globs without support for character
+classes (until these are implemented in mksh), and without taking
+the current locale into consideration.
+.Pp
+There is no implicit "and" joining.
+.Pp
+In
+.Nm git find Fl \-
+mode,
+.Em do not
+pass the
+.Fl maxdepth
+option yourself!
+.Sh BUGS
+.Nm git find
+is somewhat inefficient wrt. tempfile handling.
