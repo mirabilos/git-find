@@ -224,7 +224,7 @@ while (( $# )); do
 	(-E)
 		egrep=-E
 		;;
-	(\!|\(|-iname|-iregex|-iwholename|-name|-regex|-wholename) #)
+	(!|\(|-iname|-iregex|-iwholename|-name|-regex|-wholename) #)
 		c=mode
 		;;
 	(--)
