@@ -128,7 +128,7 @@ parse_cmd() {
 	set -- "${args[@]}"
 	(( $# < 2 )) && usage
 	[[ $1 = '-'?(i)@(name|regex|wholename) ]] || usage
-	eval "do_${1#-}" '"$2"'
+	"do_${1#-}" "$2"
 	shift 2
 	set -A args -- "$@"
 	:
