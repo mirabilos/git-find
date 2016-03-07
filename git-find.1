@@ -15,7 +15,7 @@
 .\" of dealing in the work, even if advised of the possibility of such
 .\" damage or existence of a defect, except proven that it results out
 .\" of said person’s immediate fault when using the work as intended.
-.Dd January 6, 2016
+.Dd March 7, 2016
 .Dt GIT\-FIND 1
 .Os
 .Sh NAME
@@ -126,7 +126,7 @@ case-insensitively.
 Returns files whose full relative path matches the regular
 .Ar expression
 case-insensitively.
-.It Fl iwholename Ar pattern
+.It Fl ipath Ar pattern
 Returns files whose full relative path matches the shell
 .Ar pattern
 case-insensitively.
@@ -136,7 +136,7 @@ Returns files whose basename matches the shell
 .It Fl regex Ar expression
 Returns files whose full relative path matches the regular
 .Ar expression .
-.It Fl wholename Ar pattern
+.It Fl path Ar pattern
 Returns files whose full relative path matches the shell
 .Ar pattern .
 .El
@@ -209,7 +209,7 @@ regular expression syntax flavours are not implemented, only
 (the default) and
 .Ic posix\-egrep .
 .Pp
-Matching by name or wholename, instead of regex, is implemented
+Matching by name or full path, instead of regex, is implemented
 in shell and therefore somewhat slower; it currently implements
 Korn Shell style extended globs without support for character
 classes (until these are implemented in mksh), and without taking
@@ -227,3 +227,10 @@ option yourself!
 .Sh BUGS
 .Nm git find
 is somewhat inefficient wrt. tempfile handling.
+.Sh NOTES
+The
+.Tn GNU
+.Fl wholename
+and
+.Fl iwholename
+primaries are supported as well.

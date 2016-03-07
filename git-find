@@ -32,7 +32,7 @@ die() {
 
 usage() {
 	print -ru2 -- "Usage:"
-	print -ru2 -- " ${0##*/} [-E] [-[i]name | -[i]regex | -[i]wholename] [pattern] [-print0]"
+	print -ru2 -- " ${0##*/} [-E] [-[i]name | -[i]path | -[i]regex] [pattern] [-print0]"
 	print -ru2 -- " ${0##*/} [-E] \( ! -mode pattern -a|-o -mode pattern \) ... [-print0]"
 	cleanup ${1:-2}
 }
@@ -127,7 +127,7 @@ parse_parens() {
 parse_cmd() {
 	set -- "${args[@]}"
 	(( $# < 2 )) && usage
-	[[ $1 = '-'?(i)@(name|regex|wholename) ]] || usage
+	[[ $1 = '-'?(i)@(name|path|regex|wholename) ]] || usage
 	"do_${1#-}" "$2"
 	shift 2
 	set -A args -- "$@"
@@ -146,6 +146,9 @@ do_iregex() {
 }
 
 do_wholename() {
+	do_path "$@"
+}
+do_path() {
 	# ugh, was originally thinking of converting
 	# the pattern to regex and calling grep -z
 	# turns out conversion is nontrivial
@@ -158,6 +161,9 @@ do_wholename() {
 	:
 }
 do_iwholename() {
+	do_ipath "$@"
+}
+do_ipath() {
 	local name
 	local -l lcname pattern=$1
 	while IFS= read -d '' -r name; do
@@ -224,7 +230,7 @@ while (( $# )); do
 	(-E)
 		egrep=-E
 		;;
-	(!|\(|-iname|-iregex|-iwholename|-name|-regex|-wholename) #)
+	(!|\(|-iname|-ipath|-iregex|-iwholename|-name|-path|-regex|-wholename) #)
 		c=mode
 		;;
 	(--)
