@@ -205,10 +205,67 @@ cleanup() {
 	exit $1
 }
 
-git ls-tree -r --name-only -z HEAD | LC_ALL=C sort -z >"$T/lst"
+function acquire_names {
+	local line name meta last0 last2=0
+
+	while IFS= read -d '' -r line; do
+		if [[ $line != +([0-9a-f ])'	'* ]]; then
+			print -ru2 "E: invalid ls-files output line: $line"
+			return 2
+		fi
+		name=${line#*	}
+		meta=${line%%	*}
+		if [[ $meta != @(100644|100755|120000|160000)' '+([0-9a-f])' '[0-3] ]]; then
+			print -ru2 "E: invalid ls-files output meta: $line"
+			return 2
+		fi
+		set -A meta -- $meta
+		case $last2:${meta[2]} {
+		(0:0)
+			;;
+		(0:1)
+			last0=${meta[0]}
+			last2=1
+			continue
+			;;
+		(1:2)
+			if [[ $last0 != "${meta[0]}" ]]; then
+				print -ru2 "E: unresolved conflicts: $line"
+				return 2
+			fi
+			last2=2
+			continue
+			;;
+		(2:3)
+			if [[ $last0 != "${meta[0]}" ]]; then
+				print -ru2 "E: unresolved conflicts: $line"
+				return 2
+			fi
+			last2=0
+			;;
+		(*)
+			print -ru2 "E: unexpected (not 2) ls-files stage: $line"
+			return 2
+			;;
+		}
+		# do not recurse into submodules
+		[[ ${meta[0]} = 160000 ]] && continue
+		# regular blob (possibly executable) or symlink(7)
+		print -nr -- "$name"
+		print -n '\0'
+	done
+	if [[ $last2 != 0 ]]; then
+		print -ru2 "E: missing (after $last2) ls-files stage at EOF"
+		return 2
+	fi
+	return 0
+}
+
+git ls-files -z --stage | acquire_names | LC_ALL=C sort -z >"$T/lst"
 set -A args -- "${PIPESTATUS[@]}"
 [[ ${args[0]} = 0 ]] || die "git ls-tree died with errorlevel ${args[0]}"
-[[ ${args[1]} = 0 ]] || die "sort died with errorlevel ${args[1]}"
+[[ ${args[1]} = 0 ]] || die "acquire_names died with errorlevel ${args[1]}"
+[[ ${args[2]} = 0 ]] || die "sort died with errorlevel ${args[2]}"
 
 set -A args -- "$@"
 if [[ ${args[${#args[*]}-1]} = -print0 ]]; then

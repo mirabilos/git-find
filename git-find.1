@@ -15,7 +15,7 @@
 .\" of dealing in the work, even if advised of the possibility of such
 .\" damage or existence of a defect, except proven that it results out
 .\" of said person’s immediate fault when using the work as intended.
-.Dd March 7, 2016
+.Dd September 2, 2016
 .Dt GIT\-FIND 1
 .Os
 .Sh NAME
@@ -33,7 +33,7 @@
 The
 .Nm git find
 command searches for pathnames of files currently known to git,
-that is, part of the HEAD, that match certain
+that is, staged onto the index, that match certain
 .Ar condition Ns s .
 It is modelled somewhat after the regular Unix
 .Xr find 1
@@ -185,6 +185,8 @@ empty matches as exit status 1.
 .Xr grep 1 ,
 .Xr glob 7 ,
 .Xr re_format 7
+.Sh HISTORY
+Early versions searched the HEAD commit's tree instead of the index.
 .Sh AUTHORS
 .Nm git find
 was developed by
