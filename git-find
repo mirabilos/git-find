@@ -34,6 +34,7 @@ usage() {
 	print -ru2 -- "Usage:"
 	print -ru2 -- " ${0##*/} [-E] [-[i]name | -[i]path | -[i]regex] [pattern] [-print0]"
 	print -ru2 -- " ${0##*/} [-E] \( ! -mode pattern -a|-o -mode pattern \) ... [-print0]"
+	print -ru2 -- " ${0##*/} -- find_options"
 	cleanup ${1:-2}
 }
 
