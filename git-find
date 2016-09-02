@@ -205,6 +205,44 @@ cleanup() {
 	exit $1
 }
 
+set -A args -- "$@"
+if [[ ${args[${#args[*]}-1]} = -print0 ]]; then
+	unset args[${#args[*]}-1]
+	set -- "${args[@]}"
+	output() {
+		cat "$1"
+	}
+else
+	output() {
+		LC_ALL=C tr '\0' '\n' <"$1"
+	}
+fi
+
+egrep=
+c=
+while (( $# )); do
+	case $1 {
+	(-E)
+		egrep=-E
+		;;
+	(!|\(|-iname|-ipath|-iregex|-iwholename|-name|-path|-regex|-wholename) #)
+		c=mode
+		;;
+	(--)
+		shift
+		c=patdash
+		;;
+	(-*)
+		usage
+		;;
+	(*)
+		c=pattern
+		;;
+	}
+	[[ -n $c ]] && break
+	shift
+done
+
 function acquire_names {
 	local line name meta last0 last2=0
 
@@ -262,48 +300,10 @@ function acquire_names {
 }
 
 git ls-files -z --stage | acquire_names | LC_ALL=C sort -z >"$T/lst"
-set -A args -- "${PIPESTATUS[@]}"
-[[ ${args[0]} = 0 ]] || die "git ls-tree died with errorlevel ${args[0]}"
-[[ ${args[1]} = 0 ]] || die "acquire_names died with errorlevel ${args[1]}"
-[[ ${args[2]} = 0 ]] || die "sort died with errorlevel ${args[2]}"
-
-set -A args -- "$@"
-if [[ ${args[${#args[*]}-1]} = -print0 ]]; then
-	unset args[${#args[*]}-1]
-	set -- "${args[@]}"
-	output() {
-		cat "$1"
-	}
-else
-	output() {
-		LC_ALL=C tr '\0' '\n' <"$1"
-	}
-fi
-
-egrep=
-c=
-while (( $# )); do
-	case $1 {
-	(-E)
-		egrep=-E
-		;;
-	(!|\(|-iname|-ipath|-iregex|-iwholename|-name|-path|-regex|-wholename) #)
-		c=mode
-		;;
-	(--)
-		shift
-		c=patdash
-		;;
-	(-*)
-		usage
-		;;
-	(*)
-		c=pattern
-		;;
-	}
-	[[ -n $c ]] && break
-	shift
-done
+set -A rva -- "${PIPESTATUS[@]}"
+[[ ${rva[0]} = 0 ]] || die "git ls-tree died with errorlevel ${rva[0]}"
+[[ ${rva[1]} = 0 ]] || die "acquire_names died with errorlevel ${rva[1]}"
+[[ ${rva[2]} = 0 ]] || die "sort died with errorlevel ${rva[2]}"
 
 case $#:$c {
 (0:|0:patdash)
