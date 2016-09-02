@@ -32,9 +32,9 @@ die() {
 
 usage() {
 	print -ru2 -- "Usage:"
-	print -ru2 -- " ${0##*/} [-E] [-[i]name | -[i]path | -[i]regex] [pattern] [-print0]"
-	print -ru2 -- " ${0##*/} [-E] \( ! -mode pattern -a|-o -mode pattern \) ... [-print0]"
-	print -ru2 -- " ${0##*/} -- find_options"
+	print -ru2 -- " ${0##*/} [-gitfiles] [-E] [-[i]name | -[i]path | -[i]regex] [pat] [-print0]"
+	print -ru2 -- " ${0##*/} [-gitfiles] [-E] \( ! -mode pat -a|-o -mode pat \) ... [-print0]"
+	print -ru2 -- " ${0##*/} [-gitfiles] -- find_options"
 	cleanup ${1:-2}
 }
 
@@ -221,10 +221,14 @@ fi
 
 egrep=
 c=
+alias skip_modes='[[ ${meta[0]} = 160000 ]]'
 while (( $# )); do
 	case $1 {
 	(-E)
 		egrep=-E
+		;;
+	(-gitfiles)
+		alias skip_modes='[[ ${meta[0]} = 1[26]0000 ]]'
 		;;
 	(!|\(|-iname|-ipath|-iregex|-iwholename|-name|-path|-regex|-wholename) #)
 		c=mode
@@ -287,9 +291,9 @@ function acquire_names {
 			return 2
 			;;
 		}
-		# do not recurse into submodules
-		[[ ${meta[0]} = 160000 ]] && continue
-		# regular blob (possibly executable) or symlink(7)
+		# do not recurse into submodules; exclude symlinks if -gitfiles
+		skip_modes && continue
+		# regular blob (possibly executable) or (maybe) symlink(7)
 		print -nr -- "$name"
 		print -n '\0'
 	done

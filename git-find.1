@@ -24,9 +24,11 @@
 .Sh SYNOPSIS
 .Nm git find
 .Op Fl E
+.Op Fl gitfiles
 .Op Ar condition | Ar pattern
 .Op Fl print0
 .Nm git find
+.Op Fl gitfiles
 .Fl \-
 .Ar find_options
 .Sh DESCRIPTION
@@ -43,6 +45,11 @@ some matches based on pathnames, although reusing the system
 is available (see below) if the amount of files known to
 .Nm git
 is below the operating system-imposed limitation for this to work.
+.Pp
+The output does not contain any directories or submodules (gitlinks);
+only regular files (no matter the executable bit) and, unless the
+.Fl gitfiles
+option is given, symbolic links are listed.
 .Pp
 The output is guaranteed to be sorted according to the "C" locale,
 with NUL line separators used internally.
@@ -184,7 +191,8 @@ empty matches as exit status 1.
 .Xr git\-ls\-tree 1 ,
 .Xr grep 1 ,
 .Xr glob 7 ,
-.Xr re_format 7
+.Xr re_format 7 ,
+.Xr symlink 7
 .Sh HISTORY
 Early versions searched the HEAD commit's tree instead of the index.
 .Sh AUTHORS
