@@ -3,6 +3,8 @@
 #-
 # Copyright © 2015, 2016
 #	mirabilos <t.glaser@tarent.de>
+# Copyright © 2017
+#	mirabilos <m@mirbsd.org>
 #
 # Provided that these terms and disclaimer and all copyright notices
 # are retained or reproduced in an accompanying document, permission
@@ -32,9 +34,10 @@ die() {
 
 usage() {
 	print -ru2 -- "Usage:"
-	print -ru2 -- " ${0##*/} [-gitfiles] [-E] [-[i]name | -[i]path | -[i]regex] [pat] [-print0]"
-	print -ru2 -- " ${0##*/} [-gitfiles] [-E] \( ! -mode pat -a|-o -mode pat \) ... [-print0]"
-	print -ru2 -- " ${0##*/} [-gitfiles] -- find_options"
+	print -ru2 -- "	${0##*/} [-gitfiles] [-E] [subdir ...] [condition | pattern] [-print0]"
+	print -ru2 -- "	${0##*/} [-gitfiles] [subdir ...] -- find_options"
+	print -ru2 -- "Conditions can be parenthesised, bang-negated, combined with -a or -o, or:"
+	print -ru2 -- "	{ -[i]name | -[i]path | -[i]regex } pattern"
 	cleanup ${1:-2}
 }
 
@@ -222,6 +225,7 @@ fi
 egrep=
 c=
 alias skip_modes='[[ ${meta[0]} = 160000 ]]'
+set -A subdir_prefilter
 while (( $# )); do
 	case $1 {
 	(-E)
@@ -241,7 +245,11 @@ while (( $# )); do
 		usage
 		;;
 	(*)
-		c=pattern
+		if [[ -d $1 ]]; then
+			subdir_prefilter+=("$1")
+		else
+			c=pattern
+		fi
 		;;
 	}
 	[[ -n $c ]] && break
@@ -304,7 +312,8 @@ function acquire_names {
 	return 0
 }
 
-git ls-files -z --stage | acquire_names | LC_ALL=C sort -z >"$T/lst"
+git ls-files -z --stage -- "${subdir_prefilter[@]}" | acquire_names | \
+    LC_ALL=C sort -z >"$T/lst"
 set -A rva -- "${PIPESTATUS[@]}"
 [[ ${rva[0]} = 0 ]] || die "git ls-tree died with errorlevel ${rva[0]}"
 [[ ${rva[1]} = 0 ]] || die "acquire_names died with errorlevel ${rva[1]}"

@@ -1,5 +1,7 @@
 .\" Copyright © 2016
 .\"	mirabilos <t.glaser@tarent.de>
+.\" Copyright © 2017
+.\"	mirabilos <m@mirbsd.org>
 .\"
 .\" Provided that these terms and disclaimer and all copyright notices
 .\" are retained or reproduced in an accompanying document, permission
@@ -15,7 +17,7 @@
 .\" of dealing in the work, even if advised of the possibility of such
 .\" damage or existence of a defect, except proven that it results out
 .\" of said person’s immediate fault when using the work as intended.
-.Dd September 2, 2016
+.Dd February 9, 2017
 .Dt GIT\-FIND 1
 .Os
 .Sh NAME
@@ -25,10 +27,12 @@
 .Nm git find
 .Op Fl E
 .Op Fl gitfiles
+.Op Ar subdir ...
 .Op Ar condition | Ar pattern
 .Op Fl print0
 .Nm git find
 .Op Fl gitfiles
+.Op Ar subdir ...
 .Fl \-
 .Ar find_options
 .Sh DESCRIPTION
@@ -45,6 +49,10 @@ some matches based on pathnames, although reusing the system
 is available (see below) if the amount of files known to
 .Nm git
 is below the operating system-imposed limitation for this to work.
+.Pp
+Files are searched below the current working directory; if any
+.Ar subdir Ns s
+are given, only files within those subdirectories are considered.
 .Pp
 The output does not contain any directories or submodules (gitlinks);
 only regular files (no matter the executable bit) and, unless the
@@ -75,7 +83,7 @@ If
 .Nm git find
 is called without a
 .Ar condition ,
-it returns the list of files in the index matching
+it returns the list of files in the index (but see above) matching
 .Ar pattern ,
 if given, with the
 .Fl name
@@ -194,6 +202,8 @@ empty matches as exit status 1.
 .Xr symlink 7
 .Sh HISTORY
 Early versions searched the HEAD commit's tree instead of the index.
+.Pp
+Subdirectory prefiltering was introduced in February 2017.
 .Sh AUTHORS
 .Nm git find
 was developed by
