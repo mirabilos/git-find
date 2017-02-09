@@ -1,0 +1,28 @@
+Source: git-find
+Origin: WTF
+Bugs: mailto:wtf@mirbsd.org
+Section: vcs
+Priority: optional
+Homepage: https://github.com/mirabilos/git-find
+Maintainer: Thorsten Glaser <tg@mirbsd.de>
+Build-Depends: debhelper (>= 7)
+Standards-Version: 3.9.8
+VCS-git: https://github.com/mirabilos/git-find -b debian
+VCS-Browser: https://github.com/mirabilos/git-find
+
+Package: git-find
+Architecture: all
+Multi-Arch: foreign
+Depends: ${misc:Depends}, git (>= 1:1.7.2.3), mksh (>= 50b)
+Description: git extension to find files in the index fast
+ An extension to the "git" stupid content tracker to find any files
+ and symbolic links currently known to git (registered in the index)
+ by certain criteria (mostly pathname matching) without requiring
+ filesystem access or filtering out ignored files.
+ The list of files can also be passed to findutils for postprocessing,
+ making all of find's filters available at the cost of, albeit limited,
+ filesystem access, but only for smallish repositories due to certain
+ limitations in findutils.
+ .
+ This extension is intended to eventually be merged in git-core; this
+ packaging merely bridges the time gap until then.

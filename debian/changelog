@@ -1,0 +1,5 @@
+git-find (0~20170209) wtf; urgency=low
+
+  * Initial stopgap packaging
+
+ -- Thorsten Glaser <tg@mirbsd.de>  Fri, 10 Feb 2017 00:12:38 +0100
