@@ -139,12 +139,12 @@ parse_cmd() {
 }
 
 do_regex() {
-	grep $egrep -zxe "$1"
+	grep $egrep -azxe "$1"
 	(( (e = $?) > 1 )) && die "grep died with errorlevel $e"
 	:
 }
 do_iregex() {
-	grep $egrep -zxie "$1"
+	grep $egrep -azxie "$1"
 	(( (e = $?) > 1 )) && die "grep died with errorlevel $e"
 	:
 }
@@ -325,7 +325,7 @@ case $#:$c {
 	;;
 (*:patdash)
 	pfx=
-	LC_ALL=C grep -qz '^-' "$T/lst"
+	LC_ALL=C grep -azq '^-' "$T/lst"
 	pfx=$?
 	case $pfx {
 	(0) pfx=./ ;;
