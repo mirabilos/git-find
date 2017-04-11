@@ -180,7 +180,7 @@ git find \-\- \-path '*.svg'
 .Pp
 Combinations:
 .Bd -literal -offset indent
-git find \e( -name foo -o -name bar \e) -a \e! -fullname '*docs*'
+git find \e( \-name foo \-o \-name bar \e) \-a \e! \-fullname '*docs*'
 .Ed
 .Pp
 Find recently changed files:
