@@ -139,12 +139,12 @@ parse_cmd() {
 }
 
 do_regex() {
-	grep $egrep -zxe "$1"
+	grep $egrep -azxe "$1"
 	(( (e = $?) > 1 )) && die "grep died with errorlevel $e"
 	:
 }
 do_iregex() {
-	grep $egrep -zxie "$1"
+	grep $egrep -azxie "$1"
 	(( (e = $?) > 1 )) && die "grep died with errorlevel $e"
 	:
 }
@@ -257,7 +257,7 @@ while (( $# )); do
 done
 
 function acquire_names {
-	local line name meta last0 last2=0
+	local line name meta last0 last2 lastn
 
 	while IFS= read -d '' -r line; do
 		if [[ $line != +([0-9a-f ])'	'* ]]; then
@@ -271,12 +271,16 @@ function acquire_names {
 			return 2
 		fi
 		set -A meta -- $meta
+		if [[ $name != "$lastn" ]]; then
+			last2=0
+			lastn=$name
+		fi
 		case $last2:${meta[2]} {
 		(0:0)
 			;;
-		(0:1)
+		(0:[12])
 			last0=${meta[0]}
-			last2=1
+			last2=${meta[2]}
 			continue
 			;;
 		(1:2)
@@ -284,10 +288,10 @@ function acquire_names {
 				print -ru2 "E: unresolved conflicts: $line"
 				return 2
 			fi
-			last2=2
+			last2=${meta[2]}
 			continue
 			;;
-		(2:3)
+		([12]:3)
 			if [[ $last0 != "${meta[0]}" ]]; then
 				print -ru2 "E: unresolved conflicts: $line"
 				return 2
@@ -295,7 +299,7 @@ function acquire_names {
 			last2=0
 			;;
 		(*)
-			print -ru2 "E: unexpected (not 2) ls-files stage: $line"
+			print -ru2 "E: unexpected ($last2) ls-files stage: $line"
 			return 2
 			;;
 		}
@@ -325,7 +329,7 @@ case $#:$c {
 	;;
 (*:patdash)
 	pfx=
-	LC_ALL=C grep -qz '^-' "$T/lst"
+	LC_ALL=C grep -azq '^-' "$T/lst"
 	pfx=$?
 	case $pfx {
 	(0) pfx=./ ;;
