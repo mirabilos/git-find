@@ -230,8 +230,8 @@ regular expression syntax flavours are not implemented, only
 .Pp
 Matching by name or full path, instead of regex, is implemented
 in shell and therefore somewhat slower; it currently implements
-Korn Shell style extended globs without support for character
-classes (until these are implemented in mksh), and without taking
+Korn Shell style extended globs, POSIX character classes are only
+supported with mksh R56c and newer, and these globs do not take
 the current locale into consideration.
 .Pp
 There is no implicit "and" joining.
